@@ -27,15 +27,25 @@ class PostController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        $validatedData = $request->validate([
-            'title' => 'required|max:255',
-            'body' => 'required',
-        ]);
-        Post::create($validatedData);
-        return redirect()->route('posts.index')->with('success', 'Post created successfully.');
-    }
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'title'   => 'required|string|max:255',
+        'content' => 'nullable|string',
+        'image'   => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+    ]);
+
+    if ($request->hasFile('image')) {
+    $path = $request->file('image')->store('posts', 'public');
+    $validated['image'] = $path;  // Must be 'image'
+}
+
+
+    Post::create($validated);
+
+    return redirect()->route('posts.index')->with('success', 'Post created successfully.');
+}
+
 
     /**
      * Display the specified resource.
@@ -58,16 +68,30 @@ class PostController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
-    {
-        $validatedData = $request->validate([
-            'title' => 'required|max:255',
-            'body' => 'required',
-        ]);
-        $post = Post::findOrFail($id);
-        $post->update($validatedData);
-        return redirect()->route('posts.show', $id)->with('success', 'Post updated successfully.');
+public function update(Request $request, Post $post)
+{
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'content' => 'required|string',
+        'image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+    ]);
+
+    // Update fields
+    $post->title = $validated['title'];
+    $post->content = $validated['content'];
+
+    // Handle new image if uploaded
+    if ($request->hasFile('image')) {
+        $path = $request->file('image')->store('posts', 'public');
+        $post->image = $path;
     }
+
+    $post->save();
+
+    // Redirect back to index with success message
+    return redirect()->route('posts.index')->with('success', 'Post updated successfully!');
+}
+
 
     /**
      * Remove the specified resource from storage.
